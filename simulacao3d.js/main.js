@@ -51,14 +51,17 @@ const materialEarth = new THREE.MeshBasicMaterial( {
 
 let meteor;
 const loader3D = new GLTFLoader();
-loader3D.load('Meteor_mp.obj', (OBJ) => {
-    meteor = OBJ.scene;
+loader3D.load('meteor.glb', (glb) => {
+    meteor = glb.scene;
   meteor.scale.set(0.5, 0.5, 0.5);
   meteor.position.set(50, 20, 0);
   scene.add(meteor);
 });
 
+
+
 const earth = new THREE.Mesh( geometry2, materialEarth );
+meteor = new THREE.Mesh( geometry, materialAsteroid );
 
 const earthRadius = 10;
 const cometRadius = 1;
