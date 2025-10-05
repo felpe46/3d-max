@@ -36,13 +36,10 @@ const starMat = new THREE.MeshBasicMaterial({
   side: THREE.BackSide
 });
 
-const cometTexture = textureLoader.load('textura_asteroide.jpg');
+const starField = new THREE.Mesh(starGeo, starMat);
+scene.add(starField);
+
 const earthTexture = textureLoader.load('texturaTerra.jpg')
-
-const materialAsteroid = new THREE.MeshBasicMaterial( { 
-    map: cometTexture
-} );
-
 
 const materialEarth = new THREE.MeshBasicMaterial( { 
     map: earthTexture
@@ -58,46 +55,62 @@ loader3D.load('meteor.glb', (glb) => {
   scene.add(meteor);
 });
 
-
-
 const earth = new THREE.Mesh( geometry2, materialEarth );
-meteor = new THREE.Mesh( geometry, materialAsteroid );
-
-const earthRadius = 10;
-const cometRadius = 1;
-const gap = 5;
-
-const totalDistance = earthRadius + cometRadius + gap;
 
 earth.position.x = 0;
-
 
 scene.add( earth );
 
 
 
-let velocity = new THREE.Vector3(-0.1, -0.02, 0);
+let velocity = new THREE.Vector3(-0.20, -0.20, 0);
 
 const G = 0.01; // constante gravitacional fictícia
 const offset = new THREE.Vector3(0, 5, 20); // ajuste aqui a posição da câmera em relação ao meteoro
 
+let followMeteor = true;
+function resetCameraPosition() {
+    // posição original
+    camera.position.set(0, 50, 10);
+    controls.target.set(0, 0, 0); // olhar para o centro da cena
+    controls.update(); // atualiza o controle
+}
 
 function animate() {
+    if (meteor) {
+        // Calcula a direção em direção à Terra
+        const dir = earth.position.clone().sub(meteor.position).normalize();
+        const force = dir.multiplyScalar(G);
+        velocity.add(force);
 
-    const dir = earth.position.clone().sub(meteor.position).normalize();
-    const force = dir.multiplyScalar(G);
-    velocity.add(force); // acelera em direção à Terra
-    meteor.position.add(velocity);
+        // Distância atual até o centro da Terra
+        const distance = meteor.position.distanceTo(earth.position);
 
-    camera.position.lerp(meteor.position.clone().add(offset), 0.1);
-    camera.lookAt(earth.position);
+        // Raio da Terra + raio aproximado do meteoro
+        const collisionDistance = 10 + 0.5; // earthRadius + meteorRadius
 
-    const distance = meteor.position.distanceTo(earth.position);
-    if (distance < 11) {
-        velocity.set(0, 0, 0);
+        if (distance > collisionDistance) {
+            // Meteoro ainda não colidiu, ele continua caindo
+            meteor.position.add(velocity);
+
+            if (followMeteor) {
+                camera.position.lerp(meteor.position.clone().add(offset), 0.1);
+                camera.lookAt(earth.position);
+            }
+        } else {
+            // Meteoro atingiu a Terra: trava a posição dentro da Terra
+            velocity.set(0, 0, 0); // parar movimento
+
+            // Coloca o meteoro exatamente na superfície
+            meteor.position.copy(
+                earth.position.clone().add(dir.multiplyScalar(collisionDistance))
+            );
+
+            // Libera a câmera para controle manual
+            followMeteor = false;
+        }
     }
 
-    meteor.position.add(velocity);
-
-    renderer.render( scene, camera );
+    controls.update(); // OrbitControls funcionando
+    renderer.render(scene, camera);
 }
